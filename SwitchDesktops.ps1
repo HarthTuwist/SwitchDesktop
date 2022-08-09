@@ -144,7 +144,6 @@ function WaitFirefoxOpen()
     }
 
 
-
 $keyD1  = '0x7C' ## F13
 $keyD2  = '0x7D' ## F14
 $keyD3  = '0x7E' ## F15
@@ -157,18 +156,60 @@ $keyD9  = '0x84' ## F21
 
 $keyWin = '0x5B' ## Win Key
 
-$Signature = @'
+#All these imports are copied from the internet, and I am not exactly sure what the syntax is, so I leave it as it is now
+$SigAsyncKeyState= @'
     [DllImport("user32.dll", CharSet=CharSet.Auto, ExactSpelling=true)] 
     public static extern short GetAsyncKeyState(int virtualKeyCode); 
 '@
 
-Add-Type -MemberDefinition $Signature -Name Keyboard -Namespace PsOneApi -PassThru
+Add-Type -MemberDefinition $SigAsyncKeyState -Name Keyboard -Namespace PsOneApi -PassThru
 
-$code = @'
+$SigGetForegroundWindow= @'
     [DllImport("user32.dll")]
      public static extern IntPtr GetForegroundWindow();
 '@
-Add-Type $code -Name Utils -Namespace Win32
+Add-Type $SigGetForegroundWindow -Name Utils -Namespace Win32
+
+$SigShowWindowAsync = '[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);'
+Add-Type -MemberDefinition $SigShowWindowAsync -name NativeMethods -namespace Win32
+
+
+#not sure why this is done differently than the imports for the WaitFirefoxOpen function,
+#but its from https://stackoverflow.com/questions/64469727/powershell-and-winapi-enumwindows-function
+$SigEnumWindows= @'
+// declare the EnumWindowsProc delegate type
+public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+[DllImport("user32.dll")]
+public static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+'@
+Add-Type -MemberDefinition $SigEnumWindows -Name EnumWindowsUtil -Namespace Win32Functions
+
+$SigSetForegroundWindow = @'
+    [DllImport("user32.dll")] public static extern int SetForegroundWindow(IntPtr hwnd);
+'@
+Add-Type -MemberDefinition $SigSetForegroundWindow -Name EnumWindowsUtil -Namespace Win32Functions -PassThru
+
+function SetFocusToTopmostWindow()
+{
+    "logging powershell" | Out-File -FilePath C:\Users\offen\output.txt 
+    $targetHwnd = 0
+    [Win32Functions.EnumWindowsUtil]::EnumWindows({
+        #[void][Win32]::EnumThreadWindows($_.Id, {
+            param($hwnd, $lparam)
+
+            -join("checking hwnd: ", $hwnd, ", targethwnd:", $targetHwnd) | Out-File -FilePath C:\Users\offen\output.txt -append
+
+            if ([Win32]::IsWindowVisible($hwnd)) {
+                if ($targetHwnd -eq 0) {
+                    $targetHwnd = $hwnd #I have no idea how to cancel the enumeration
+                    "found hwnd" | Out-File -FilePath C:\Users\offen\output.txt -append
+                }
+            }}, 0)
+            $targetHwnd | Out-File -FilePath C:\Users\offen\output.txt -append
+    [Win32Functions.EnumWindowsUtil]::SetForegroundWindow($targetHwnd)
+}
+
 
 $LastKey7 = 0
 $LastKey7AllowedTime = 1500
@@ -196,6 +237,8 @@ do
 		}
 		Else {
 			Get-Desktop  0 | Switch-Desktop
+            Start-Sleep -Milliseconds 200
+            SetFocusToTopmostWindow
 		}
 	}
 	Elseif (([bool] (( $result2 -eq -32767 ) -or ( $result2 -eq -32768 ))) -and $bWinPressed)
@@ -203,10 +246,11 @@ do
 		If($LastKey7 + $LastKey7AllowedTime -ge [Math]::Round((Get-Date).ToFileTimeUTC()/10000))
 		{
 			Get-Desktop 1 | Move-ActiveWindow
-			$LastKey7 = 1	
+			$LastKey7 = 0	
 		}
 		Else {
 			Get-Desktop  1 | Switch-Desktop
+            SetFocusToTopmostWindow
 		}
 	}
 	Elseif (([bool] (( $result3 -eq -32767 ) -or ( $result3 -eq -32768 ))) -and $bWinPressed)
@@ -214,10 +258,11 @@ do
 		If($LastKey7 + $LastKey7AllowedTime -ge [Math]::Round((Get-Date).ToFileTimeUTC()/10000))
 		{
 			Get-Desktop 2 | Move-ActiveWindow
-			$LastKey7 = 2	
+			$LastKey7 = 0	
 		}
 		Else {
 			Get-Desktop  2 | Switch-Desktop
+            SetFocusToTopmostWindow
 		}
 	}
 	Elseif (([bool] (( $result4 -eq -32767 ) -or ( $result4 -eq -32768 ))) -and $bWinPressed)
@@ -225,10 +270,11 @@ do
 		If($LastKey7 + $LastKey7AllowedTime -ge [Math]::Round((Get-Date).ToFileTimeUTC()/10000))
 		{
 			Get-Desktop 3 | Move-ActiveWindow
-			$LastKey7 = 3	
+			$LastKey7 = 0	
 		}
 		Else {
 			Get-Desktop  3 | Switch-Desktop
+            SetFocusToTopmostWindow
 		}
 	}
 	Elseif (([bool] (( $result5 -eq -32767 ) -or ( $result5 -eq -32768 ))) -and $bWinPressed)
@@ -247,13 +293,15 @@ do
 	}
 	Elseif (([bool] (( $result8 -eq -32767 ) -or ( $result8 -eq -32768 ))) -and $bWinPressed)
 	{
-		$Firefox= WaitFirefoxOpen -Arguments "-new-window" 
+		$Firefox= WaitFirefoxOpen -Arguments "-new-window -foreground" 
 		[Window]::MoveWindow($Firefox, -8, 22, 1936, 1066, $True)
+        [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
 	}
 	Elseif (([bool] (( $result9 -eq -32767 ) -or ( $result9 -eq -32768 ))) -and $bWinPressed)
 	{
 		$Firefox= WaitFirefoxOpen -Arguments "-private-window" 
 		[Window]::MoveWindow($Firefox, -8, 22, 1936, 1066, $True)
+        [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
 	}
 	
     Start-Sleep -Milliseconds 15
