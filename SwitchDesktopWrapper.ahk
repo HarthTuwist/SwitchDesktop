@@ -2,7 +2,7 @@
 
 ;"(get-process | ? { $_.processname -eq "powershell" } )| stop-process"  
 ;Process, Close, powershell.exe
-Run, powershell -Command "powershell -WindowStyle hidden -file C:\Users\offen\Desktop\SwitchDesktops.ps1"
+Run, powershell -Command "powershell -WindowStyle hidden -file  C:\SwitchDesktopScripts\SwitchDesktops.ps1"
 #InstallKeybdHook
 
 ;LWin & f::switchDesktopByNumber(1)
@@ -30,6 +30,23 @@ return
 	Send {F16 up}  
 return
 
+#k::
+	Send {F17 down}
+	Sleep 30
+	Send {F17 up} 
+return
+
+#!k::
+	Send {F18 down}
+	Sleep 30
+	Send {F18 up} 
+return
+
+#b::
+	Send {F19 down}
+	Sleep 30
+	Send {F19 up} 
+return
 
 <#h::
 	Run, C:\Program Files\Mozilla Firefox\firefox.exe -foreground
