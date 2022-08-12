@@ -143,8 +143,12 @@ function WaitFirefoxOpen()
 "@
     }
 
+#TODO: Can we replace this jank with Messages, e.g. https://www.autohotkey.com/docs/misc/SendMessage.htm and
+#https://docs.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc 
 
-$keyD1  = '0x7C' ## F13
+#skip F13, as we are sending it ourselves to communicate with autohotkey (the other way around than the other keys)
+#cannot use F23, as vbscript, which we seem to be using to send keys, can only send up to f16
+#$keyD1  = '0x7C' ## F13
 $keyD2  = '0x7D' ## F14
 $keyD3  = '0x7E' ## F15
 $keyD4  = '0x7F' ## F16
@@ -153,6 +157,8 @@ $keyD6  = '0x81' ## F18
 $keyD7  = '0x82' ## F19
 $keyD8  = '0x83' ## F20
 $keyD9  = '0x84' ## F21
+$keyD10  = '0x85' ## F22
+$keyD1  = '0x86' ## F23
 
 $keyWin = '0x5B' ## Win Key
 
@@ -193,26 +199,39 @@ Add-Type -MemberDefinition $SigSetForegroundWindow -Name EnumWindowsUtil -Namesp
 function SetFocusToTopmostWindow()
 {
     "logging powershell" | Out-File -FilePath C:\Users\offen\output.txt 
-    $targetHwnd = 0
     [Win32Functions.EnumWindowsUtil]::EnumWindows({
         #[void][Win32]::EnumThreadWindows($_.Id, {
             param($hwnd, $lparam)
 
-            -join("checking hwnd: ", $hwnd, ", targethwnd:", $targetHwnd) | Out-File -FilePath C:\Users\offen\output.txt -append
+            -join("checking hwnd: ", $hwnd ) | Out-File -FilePath C:\Users\offen\output.txt -append
 
             if ([Win32]::IsWindowVisible($hwnd)) {
-                if ($targetHwnd -eq 0) {
-                    $targetHwnd = $hwnd #I have no idea how to cancel the enumeration
                     "found hwnd" | Out-File -FilePath C:\Users\offen\output.txt -append
+                    [Win32Functions.EnumWindowsUtil]::SetForegroundWindow($hwnd)
+                    return $false
                 }
-            }}, 0)
-            $targetHwnd | Out-File -FilePath C:\Users\offen\output.txt -append
-    [Win32Functions.EnumWindowsUtil]::SetForegroundWindow($targetHwnd)
+                return $true
+            }, 0)
 }
 
 
 $LastKey7 = 0
 $LastKey7AllowedTime = 1500
+
+
+$script:LastHwndDesk0 = 0
+$script:LastHwndDesk1 = 0
+$script:LastHwndDesk2 = 0
+$script:LastHwndDesk3 = 0
+function StoreDesktopLastWindow
+{
+        "StoreDesktopLastWindow" | Out-File -FilePath C:\Users\offen\output.txt -append
+        $CurDeskNumber = (Get-DesktopList | Where {$_.Visible -eq $true}).Number
+    if ($CurDeskNumber -eq 0) {
+        $script:LastHwndDesk0 =  [Win32.Utils]::GetForegroundWindow()
+         $script:LastHwndDesk0 | Out-File -FilePath C:\Users\offen\output.txt -append
+    }
+}
 do
 {  
 	$result = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD1)
@@ -224,6 +243,7 @@ do
 	$result7 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD7)
 	$result8 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD8)
 	$result9 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD9)
+	$result10 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD10)
 	$resultWin = [PsOneApi.Keyboard]::GetAsyncKeyState($keyWin)
 
 	$bWinPressed = [bool] (( $resultWin -eq -32767 ) -or ( $resultWin -eq -32768 ))
@@ -237,8 +257,31 @@ do
 		}
 		Else {
 			Get-Desktop  0 | Switch-Desktop
-            Start-Sleep -Milliseconds 200
-            SetFocusToTopmostWindow
+        #    Start-Sleep -Milliseconds 100
+            #SetFocusToTopmostWindow
+             #-join ("switching to", $script:LastHwndDesk0) | Out-File -FilePath C:\Users\offen\output.txt -append
+
+#         $OriginalWindows = New-Object System.Collections.ArrayList
+#		Get-Process | %{
+#		$proc = -join ($_.id, $_.ProcessName)
+#         $_.Threads.ForEach({
+#             [void][Win32]::EnumThreadWindows($_.Id, {
+#                 param($hwnd, $lparam)
+#                 if (($hwnd -eq $script:LastHwndDesk0)) {
+#                  #   $OriginalWindows.Add($hwnd)
+#					 #$OriginalWindows.Add($proc)
+#                     -join($script:LastHwndDesk0 , ",", $proc) | Out-File -FilePath C:\Users\offen\output.txt -append
+#                 }}, 0)
+#             })}
+             
+            #$OriginalWindows | Out-File -FilePath C:\Users\offen\output.txt 
+             #Get-Process | Where-Object { $_.mainWindowHandle -eq $script:LastHwndDesk0 } | Select-Object processName, MainWindowTItle, MainWindowHandle, Id |  Out-File -FilePath C:\Users\offen\output.txt -append
+
+            Start-Sleep -Milliseconds 100
+             $wshell = New-Object -ComObject wscript.shell;
+             $wshell.SendKeys('{F13}')
+            #[Win32Functions.EnumWindowsUtil]::SetForegroundWindow($script:LastHwndDesk0)
+    #        [Win32.NativeMethods]::ShowWindowAsync($script:LastHwndDesk0, 1) #1 = do not change whether minimized or maximized
 		}
 	}
 	Elseif (([bool] (( $result2 -eq -32767 ) -or ( $result2 -eq -32768 ))) -and $bWinPressed)
@@ -249,8 +292,13 @@ do
 			$LastKey7 = 0	
 		}
 		Else {
+            #StoreDesktopLastWindow
 			Get-Desktop  1 | Switch-Desktop
-            SetFocusToTopmostWindow
+            Start-Sleep -Milliseconds 100
+             $wshell = New-Object -ComObject wscript.shell;
+             $wshell.SendKeys('{F13}')
+         #   Start-Sleep -Milliseconds 200
+         #   SetFocusToTopmostWindow
 		}
 	}
 	Elseif (([bool] (( $result3 -eq -32767 ) -or ( $result3 -eq -32768 ))) -and $bWinPressed)
@@ -262,7 +310,10 @@ do
 		}
 		Else {
 			Get-Desktop  2 | Switch-Desktop
-            SetFocusToTopmostWindow
+            Start-Sleep -Milliseconds 100
+             $wshell = New-Object -ComObject wscript.shell;
+             $wshell.SendKeys('{F13}')
+            #SetFocusToTopmostWindow
 		}
 	}
 	Elseif (([bool] (( $result4 -eq -32767 ) -or ( $result4 -eq -32768 ))) -and $bWinPressed)
@@ -274,7 +325,10 @@ do
 		}
 		Else {
 			Get-Desktop  3 | Switch-Desktop
-            SetFocusToTopmostWindow
+            Start-Sleep -Milliseconds 100
+             $wshell = New-Object -ComObject wscript.shell;
+             $wshell.SendKeys('{F13}')
+            #SetFocusToTopmostWindow
 		}
 	}
 	Elseif (([bool] (( $result5 -eq -32767 ) -or ( $result5 -eq -32768 ))) -and $bWinPressed)
@@ -302,6 +356,10 @@ do
 		$Firefox= WaitFirefoxOpen -Arguments "-private-window" 
 		[Window]::MoveWindow($Firefox, -8, 22, 1936, 1066, $True)
         [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
+	}
+	Elseif (([bool] (( $result10 -eq -32767 ) -or ( $result10 -eq -32768 ))) )
+	{
+        exit
 	}
 	
     Start-Sleep -Milliseconds 15

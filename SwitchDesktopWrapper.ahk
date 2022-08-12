@@ -3,6 +3,11 @@
 ;I am not sure why I am doing this anymore and whether this is necessary
 #InstallKeybdHook
 
+;Send F22 to tell process that are still running that they should cancel
+;this doesn't seem to work, but the hotkey does, strange
+Send {F22 down}
+Sleep 200
+Send {F22 up} 
 
 ;Setup powershell heavy lifter:
 
@@ -10,11 +15,35 @@
 ;Process, Close, powershell.exe
 Run, powershell -Command "powershell -WindowStyle hidden -file  C:\SwitchDesktopScripts\SwitchDesktops.ps1"
 
+
+;TODO: Can we replace this Hack with the SendMessage Function?
 ;LWin & f::switchDesktopByNumber(1)
 <#f::
-	Send {F13 down} 
+	;Send {F13 down} 
+	;Sleep 30 
+	;Send {F13 up}  
+    ;Do not use F13m use F23 instead
+	Send {F23 down} 
 	Sleep 30 
-	Send {F13 up}  
+	Send {F23 up}  
+return
+
+;this is called by a hook via visual basic from SwitchDesktop.ps1
+F13::
+    winget, id, list,
+    loop, %id%
+    {
+        this_id := id%a_index%
+        wingettitle, this_title, ahk_id %this_id%
+        
+        ;Autohotkey returns some windows with empty titles, I think the task bars. Anyways, we ignore them
+        ;First hit is topmost window by the ordering of the results of winget
+        if(this_title != "")
+        {
+            WinActivate, ahk_id %this_id%
+            return
+        }
+    }
 return
 
 <#c::
@@ -65,6 +94,16 @@ return
 	Send {F21 up} 
 return
 
+#^!l::
+	Send {F22 down}
+	Sleep 30
+	Send {F22 up} 
+return
+
+;F23::
+;Used above
+;Do not use here
+    
 ;<#h::
 ;	Run, C:\Program Files\Mozilla Firefox\firefox.exe -foreground
 ;return
@@ -168,4 +207,11 @@ return
     ;this can be better than wingetpos according to the documentation???
     DllCall("SetCursorPos", "int", activeX + activeW / 2, "int", activeY + activeH / 2)
     ;MouseMove, activeX , activeY , 0
+return
+
+#!q::
+if not WinExist("ahk_class Chrome_WidgetWin_0")
+    return
+; Otherwise, the above has set the "last found" window for use below.
+ControlSend, ahk_parent, {Space} ; Pause/Unpause
 return
