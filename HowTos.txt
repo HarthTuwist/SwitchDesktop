@@ -1,0 +1,39 @@
+How to get Access Token:
+Either go here or something:
+https://developer.spotify.com/console/get-users-available-devices/
+
+Or, more sound method:
+
+Get Client_id and Client_secret from the Spotify Dashboard. Make sure http://localhost:8888/callback is allowed in the callback list. Then sent a GET response to the following URI (can just do in browser). There is no need for a server to actually exist under Localhost:8888/callback. Your browser will redirect you to an URI (that does not exist) and you can take the Authentification code from the URI
+
+Base64IdSecret.json has to be a Json of the format:
+{"idsecretb64":"Basic [base64 encoding of Client_id:Client_secret]"}
+	Client_id:Client_secret has to be encoded together (And not base64(Client_id):base64(Client_secret)). The "Basic " (note the space) must not be encoded.
+The base64 encoding may be gotten in the internet, or for example by:
+	-join ("Authorization: Basic ", (wsl echo -n "[Client_id]:[Client_secret]" `| openssl base64 -A))
+Please note possible problems with linebreaks in the encoded string (-A supresses that) and in the string that is encoded (that is what echo -n is for, there can be problems where the linebreak in windows or linux style at the end of echo ist encoded as well.
+
+https://accounts.spotify.com/authorize?response_type=code&client_id=[ID]&scope=user-modify-playback-state+user-read-playback-state&redirect_uri=http://localhost:8888/callback
+
+Under scope, put all scopes you need to access for functionality.
+ 
+ 
+Use the resulting code
+
+For:
+
+
+	$idsecretb64 = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\Base64IdSecret.json | ConvertFrom-Json).idsecretb64
+
+	$originalBody = @{
+		grant_type="authorization_code"
+		code=[PUT IN CODE GATHERED ABOVE HERE]
+		redirect_uri="http://localhost:8888/callback"}
+	 
+	$originalHeader = @{'Authorization' = $idsecretb64}
+
+	$originalObj = Invoke-WebRequest -Method "POST" -Headers $originalHeader -Body $originalBody -Uri 'https://accounts.spotify.com/api/token' ; $originalObj.Content | Out-File -FilePath C:\SwitchDesktopScripts\Secrets\OriginalAccessToken.json
+			
+		
+This will store the token at the given adress SwitchDesktopScripts 
+

@@ -159,6 +159,7 @@ $keyD8  = '0x83' ## F20
 $keyD9  = '0x84' ## F21
 $keyD10  = '0x85' ## F22
 $keyD1  = '0x86' ## F23
+$keyD11  = '0x87' ## F23
 
 $keyWin = '0x5B' ## Win Key
 
@@ -214,10 +215,46 @@ function SetFocusToTopmostWindow()
             }, 0)
 }
 
+$RefreshSpotifyTokenScriptBlock = 
+{
+        #Read the refresh token (which seems to have unlimited validity) from the result from the Original Access call
+        $refreshtoken = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\OriginalAccessToken.json | ConvertFrom-Json).refresh_token
 
-$LastKey7 = 0
-$LastKey7AllowedTime = 1500
+        #Read the Client_id:Client_secret, converted to base 64 and prefaced with "Base" from this file (cumbersome to reencode it every time)
+		$idsecretb64 = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\Base64IdSecret.json | ConvertFrom-Json).idsecretb64
+		
+        #make the actual call
+		$refreshBody = @{
+            grant_type="refresh_token"
+            refresh_token=$refreshtoken}
+		$refreshHeader = @{'Authorization' = $idsecretb64}
+		$refreshobj = Invoke-WebRequest -Method "POST" -Headers $refreshHeader -Body $refreshBody -Uri 'https://accounts.spotify.com/api/token' ; $refreshobj.Content | Out-File -FilePath C:\SwitchDesktopScripts\Secrets\AccessToken.json
+		
 
+}
+
+#Refresh the access token on startup
+#Invoke-Command here instead of Start-Job such that we wait on the result
+Invoke-Command -ScriptBlock $RefreshSpotifyTokenScriptBlock
+
+$script:SpotifyIDOfDevice = 0
+#Via the API, get the ID of the current device
+function SetSpotifyIDOfDevice{
+    $GetIDAaccesstoken = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\AccessToken.json | ConvertFrom-Json).access_token
+    $GetIDHeader = @{'Authorization' = (-join("Bearer ", $GetIDAaccesstoken))}
+    $GetIDResult = Invoke-WebRequest -Method "GET" -Headers $GetIDHeader -Uri 'https://api.spotify.com/v1/me/player/devices'
+
+    $script:SpotifyIDOfDevice=(($GetIDResult.Content | ConvertFrom-Json).devices | Where {$_.name -eq (Hostname)}).id
+}
+
+
+$LastKey7 = 0#Do not pretend Key7 was pressed when starting up, thatd be weird
+$LastKey7AllowedTime = 1500 
+
+$TimeBetweenTokenRefreshes = 300000 #300 seconds = 6m
+#$LastTokenrefreshTime = [decimal]::MaxValue #Start with a refresh when starting the script,  
+#$LastTokenrefreshTime = [bigint]::Pow(10,20) #Do not use MaxValue, as we cannot add on it. This should be further away than the death of the sun
+$LastTokenrefreshTime = 0
 
 $script:LastHwndDesk0 = 0
 $script:LastHwndDesk1 = 0
@@ -232,8 +269,23 @@ function StoreDesktopLastWindow
          $script:LastHwndDesk0 | Out-File -FilePath C:\Users\offen\output.txt -append
     }
 }
+
+
+
+
+#############################################Actual permanent while loop starts here
+#############################################Actual permanent while loop starts here
+#############################################Actual permanent while loop starts here
+#############################################Actual permanent while loop starts here
+
+
+
+
 do
 {  
+
+#####################################Check for all the key presses and such
+
 	$result = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD1)
 	$result2 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD2)
 	$result3 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD3)
@@ -244,6 +296,7 @@ do
 	$result8 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD8)
 	$result9 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD9)
 	$result10 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD10)
+	$result11 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD11)
 	$resultWin = [PsOneApi.Keyboard]::GetAsyncKeyState($keyWin)
 
 	$bWinPressed = [bool] (( $resultWin -eq -32767 ) -or ( $resultWin -eq -32768 ))
@@ -361,7 +414,41 @@ do
 	{
         exit
 	}
-	
+    
+	Elseif (([bool] (( $result11 -eq -32767 ) -or ( $result11 -eq -32768 ))) )
+	{
+        #if we do not have a device ID, mainly because spotify started after the script, set the device id here
+        #TODO: Can the device ID change while running, or with restarting spotify? I do not think it does
+        if(-Not $script:SpotifyIDOfDevice)
+        {
+            SetSpotifyIDOfDevice
+        }
+        #Only do the query if we actually found a device above
+        if($script:SpotifyIDOfDevice)
+        {     
+            $accesstoken = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\AccessToken.json | ConvertFrom-Json).access_token
+
+            $ButtonPressHeader = @{'Authorization' = (-join("Bearer ", $accesstoken))}
+            $ButtonPressResult = Invoke-WebRequest -Method "POST" -Headers $ButtonPressHeader -Uri (-join('https://api.spotify.com/v1/me/player/next?device_id=', $SpotifyIDOfDevice))
+            #$ButtonPressResult  | Out-File -FilePath C:\Users\offen\output.txt  -append
+       }
+	}
+
+
+##################################### Handle the check whether we need to refresh the Spotify Access Token
+#this is not done in its own background job to clarify problems 
+
+    #-join("tokenrefresh", $LastTokenrefreshTime, ",") | Out-File -FilePath C:\Users\offen\output.txt  -append
+    If($LastTokenrefreshTime + $TimeBetweenTokenRefreshes -le [Math]::Round((Get-Date).ToFileTimeUTC()/10000) )
+    {
+        #-join("tokenrefresh", $LastTokenrefreshTime, ",", [Math]::Round((Get-Date).ToFileTimeUTC()/10000) + $TimeBetweenTokenRefreshes) | Out-File -FilePath C:\Users\offen\output.txt  -append
+        Start-Job -ScriptBlock $RefreshSpotifyTokenScriptBlock
+		$LastTokenrefreshTime = [Math]::Round((Get-Date).ToFileTimeUTC()/10000)
+    }
+
+
+
+#####################################Skip some time before returning to the top, so we don't take to much proccessor time
     Start-Sleep -Milliseconds 15
 
 } while($true)

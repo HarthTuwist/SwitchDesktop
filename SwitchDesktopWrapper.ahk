@@ -103,6 +103,12 @@ return
 ;F23::
 ;Used above
 ;Do not use here
+
+#u::
+	Send {F24 down}
+	Sleep 30
+	Send {F24 up} 
+return
     
 ;<#h::
 ;	Run, C:\Program Files\Mozilla Firefox\firefox.exe -foreground
@@ -209,9 +215,32 @@ return
     ;MouseMove, activeX , activeY , 0
 return
 
-#!q::
-if not WinExist("ahk_class Chrome_WidgetWin_0")
-    return
-; Otherwise, the above has set the "last found" window for use below.
-ControlSend, ahk_parent, {Space} ; Pause/Unpause
-return
+
+
+
+
+
+;DetectHiddenWindows, On
+;sendSpotifyKey(key)
+;sendSpotifyKey(key)
+;    {
+;        if (not WinExist("ahk_exe Spotify.exe"))
+;        {
+;            return
+;        }
+;        
+;        ;from https://gist.github.com/jcsteh/7ccbc6f7b1b7eb85c1c14ac5e0d65195 
+;        ; Get the HWND of the Spotify main window.
+;        WinGet, spotifyHwnd, ID, ahk_exe spotify.exe
+;
+;        ; Chromium ignores keys when it isn't focused.
+;        ; Focus the document window without bringing the app to the foreground.
+;        ControlFocus, Chrome_RenderWidgetHostHWND1, ahk_id %spotifyHwnd%
+;        ControlSend, , %key%, ahk_id %spotifyHwnd%
+;    }
+;return
+;
+;!q::
+;    sendSpotifyKey("{Space}")
+
+;return
