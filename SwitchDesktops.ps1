@@ -1,6 +1,7 @@
 $host.ui.RawUI.WindowTitle = "SwitchDesktopsPowershell"
 Import-Module VirtualDesktop
-
+$LionSpecial = $false
+#$LionSpecial = $true
 
 #from https://superuser.com/questions/1328345/find-all-window-titles-of-application-through-command-line
 Add-Type  @"
@@ -400,10 +401,30 @@ do
 	}
 	Elseif (([bool] (( $result8 -eq -32767 ) -or ( $result8 -eq -32768 ))) -and $bWinPressed)
 	{
-		$Firefox= WaitFirefoxOpen -Arguments "-new-window -foreground" 
-		[Window]::MoveWindow($Firefox, -8, 22, 1936, 1066, $True)
-        [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
-	}
+        if (-Not $LionSpecial) 
+        {
+	        $Firefox= WaitFirefoxOpen -Arguments "-new-window -foreground" 
+	            [Window]::MoveWindow($Firefox, -8, 22, 1936, 1066, $True)
+	            [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
+        }
+        else {
+            $accesstoken = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\AccessToken.json | ConvertFrom-Json).access_token
+
+            $SongIdHeader = @{'Authorization' = (-join("Bearer ", $accesstoken))}
+            $SongIdResult = Invoke-WebRequest -Method "GET" -Headers $SongIdHeader -Uri 'https://api.spotify.com/v1/me/player/currently-playing'
+
+
+            if($SongIdResult.StatusCode -eq 200)
+            {
+                $CurrentSongId = ($SongIdResult.Content | ConvertFrom-Json).item.id
+
+                $LikeSongHeader = @{'Authorization' = (-join("Bearer ", $accesstoken))
+                    'Accept' = 'application/json'
+                    'Content-Type' = 'application/json'}
+                $LikeSongResult = Invoke-WebRequest -Method "PUT" -Headers $LikeSongHeader -Uri (-join('https://api.spotify.com/v1/me/tracks?ids=', $CurrentSongId))
+            }
+        }
+    }
 	Elseif (([bool] (( $result9 -eq -32767 ) -or ( $result9 -eq -32768 ))) -and $bWinPressed)
 	{
 		$Firefox= WaitFirefoxOpen -Arguments "-private-window" 

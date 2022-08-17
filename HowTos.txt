@@ -13,7 +13,11 @@ The base64 encoding may be gotten in the internet, or for example by:
 	-join ("Authorization: Basic ", (wsl echo -n "[Client_id]:[Client_secret]" `| openssl base64 -A))
 Please note possible problems with linebreaks in the encoded string (-A supresses that) and in the string that is encoded (that is what echo -n is for, there can be problems where the linebreak in windows or linux style at the end of echo ist encoded as well.
 
-https://accounts.spotify.com/authorize?response_type=code&client_id=[ID]&scope=user-modify-playback-state+user-read-playback-state&redirect_uri=http://localhost:8888/callback
+https://accounts.spotify.com/authorize?response_type=code&client_id=[ID]&scope=user-modify-playback-state+user-read-playback-state+user-library-modify+playlist-modify-public&redirect_uri=http://localhost:8888/callback
+
+scope=user-modify-playback-state+user-read-playback-state+user-library-modify+playlist-modify-public
+	+playlist-read-public does not seem to work, illegal scope????
+
 
 Under scope, put all scopes you need to access for functionality.
  
@@ -21,7 +25,6 @@ Under scope, put all scopes you need to access for functionality.
 Use the resulting code
 
 For:
-
 
 	$idsecretb64 = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\Base64IdSecret.json | ConvertFrom-Json).idsecretb64
 

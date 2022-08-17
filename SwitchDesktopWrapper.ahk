@@ -82,7 +82,8 @@ return
 	Send {F19 up} 
 return
 
-#!c::
+;Lion special key
+#!c:: 
 	Send {F20 down}
 	Sleep 30
 	Send {F20 up} 
