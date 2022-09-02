@@ -7,7 +7,7 @@ Autohotkey script that spawns a powershell process in the background which does 
 
 
 # Preresquites
-The Powershell Modules PSVirtualDesktop and WASP (not sure if the latter is still needed in active code??) need to be installed. For Spotify Hotkeys, Spotify Secrets have to be set up such that Web-API calls can be made. Look into HowTo.txt for that. The Windows Animations "Animate Controls and elements inside windows" and "Animate windows when minimizing and maximizing" should be disabled, otherwise desktop switching and such will be painfully slow because the animations take so long.
+The Powershell Modules PSVirtualDesktop ~~and WASP~~(WASP is not needed) need to be installed. Note that for the installments of PSVirtualDesktop I found you also need to allow execution of remote signed scripts. For Spotify Hotkeys, Spotify Secrets have to be set up such that Web-API calls can be made. Look into HowTo.txt for that. The Windows Animations "Animate Controls and elements inside windows" and "Animate windows when minimizing and maximizing" should be disabled, otherwise desktop switching and such will be painfully slow because the animations take so long.
 
 The git repository has to be located in C:/SwitchDesktopScripts
 
