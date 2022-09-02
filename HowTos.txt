@@ -30,7 +30,7 @@ For:
 
 	$originalBody = @{
 		grant_type="authorization_code"
-		code=[PUT IN CODE GATHERED ABOVE HERE]
+		code="[PUT IN CODE GATHERED ABOVE HERE]"
 		redirect_uri="http://localhost:8888/callback"}
 	 
 	$originalHeader = @{'Authorization' = $idsecretb64}
@@ -40,3 +40,4 @@ For:
 		
 This will store the token at the given adress SwitchDesktopScripts 
 
+Note the " after "code=" in $originalBody.
