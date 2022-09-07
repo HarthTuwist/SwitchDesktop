@@ -216,9 +216,13 @@ return
     ;MouseMove, activeX , activeY , 0
 return
 
+#+H::
+    Send #+{Left}
+return
 
-
-
+#+J::
+    Send #+{Right}
+return
 
 
 ;DetectHiddenWindows, On

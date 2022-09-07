@@ -37,5 +37,10 @@ Destroys the background Powershell process. Autohotkey script still keeps runnin
 Move Focus to the topmost window to the left of the current window
 ## Win J
 Move Focus to the topmost window to the right of the current window
+## Win Shift H
+Send Win Shift Left (Move Window one Monitor left)
+## Win Shift J
+Send Win Shift Right (Move Window one Monitor right)
+
 ## Win Middle Mouse Button
 Set the mouse to the center of the currently active window
