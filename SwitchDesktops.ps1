@@ -3,6 +3,23 @@ Import-Module VirtualDesktop
 $LionSpecial = $false
 #$LionSpecial = $true
 
+$LaptopFirefoxTarget = [PSCustomObject]@{
+	XPos = -13
+	YPos = -13
+	Width = 3266
+	Height = 2106
+}
+
+$FirefoxTarget = [PSCustomObject]@{
+	XPos = -8
+	YPos = 22
+	Width = 1936
+	Height = 1066
+}
+
+#comment this in to use the Laptop window target for creating new browser windows instead of the desktop one
+#$FirefoxTarget = $LaptopFirefoxTarget
+
 #from https://superuser.com/questions/1328345/find-all-window-titles-of-application-through-command-line
 Add-Type  @"
     using System;
@@ -404,7 +421,7 @@ do
         if (-Not $LionSpecial) 
         {
 	        $Firefox= WaitFirefoxOpen -Arguments "-new-window -foreground" 
-	            [Window]::MoveWindow($Firefox, -8, 22, 1936, 1066, $True)
+	            [Window]::MoveWindow($Firefox, $FirefoxTarget.XPos, $FirefoxTarget.YPos, $FirefoxTarget.Width, $FirefoxTarget.Height, $True)
 	            [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
         }
         else {
@@ -428,7 +445,7 @@ do
 	Elseif (([bool] (( $result9 -eq -32767 ) -or ( $result9 -eq -32768 ))) -and $bWinPressed)
 	{
 		$Firefox= WaitFirefoxOpen -Arguments "-private-window" 
-		[Window]::MoveWindow($Firefox, -8, 22, 1936, 1066, $True)
+		[Window]::MoveWindow($Firefox, $FirefoxTarget.XPos, $FirefoxTarget.YPos, $FirefoxTarget.Width, $FirefoxTarget.Height, $True)
         [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
 	}
 	Elseif (([bool] (( $result10 -eq -32767 ) -or ( $result10 -eq -32768 ))) )

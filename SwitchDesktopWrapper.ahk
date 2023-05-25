@@ -224,6 +224,15 @@ return
     Send #+{Right}
 return
 
+;*AppsKey::
+;    Send {RButton down}
+;return
+
+AppsKey::RButton
+
+;*AppsKey Up::
+;    Send {RButton up}
+;return
 
 ;DetectHiddenWindows, On
 ;sendSpotifyKey(key)
