@@ -139,9 +139,10 @@ return
         this_id := id%a_index%
         wingetpos, X, Y, W, H, ahk_id %this_id%
         wingettitle, this_title, ahk_id %this_id%
+        wingetclass, this_class, ahk_id %targetId%
         
         ;Autohotkey returns some windows with empty titles, I think the task bars. Anyways, we ignore them
-        if(this_title != "")
+        if(this_title != "" and this_title != "SwitchDesktopWrapper.ahk" and this_class != "AutoHotkeyGUI")
         {
             ;titles.=a_index ": " this_title ";" this_class ";" X ";" W "," targetXBorder "`n" 
             if (X + W  > targetXBorder + MinImproment && X + W < activeX + leeway)
@@ -160,6 +161,8 @@ return
 
     if (targetId != activeID) 
     {
+        wingetpos, X, Y, W, H, ahk_id %targetId%
+        Box("FF9E3B", 2, X+(W/2)-10, Y+(2*H/3)-10, X+(W/2)+10, Y+(2*H/3)+10)
         WinActivate, ahk_id %targetId%
     }
 return
@@ -183,9 +186,10 @@ return
         this_id := id%a_index%
         wingetpos, X, Y, W, H, ahk_id %this_id%
         wingettitle, this_title, ahk_id %this_id%
+        wingetclass, this_class, ahk_id %targetId%
         
         ;Autohotkey returns some windows with empty titles, I think the task bars. Anyways, we ignore them
-        if(this_title != "")
+        if(this_title != "" and this_title != "SwitchDesktopWrapper.ahk" and this_class != "AutoHotkeyGUI")
         {
             ;titles.=a_index ": " this_title ";" this_class ";" X ";" W "," targetXBorder "`n" 
             if (X < targetXBorder - MinImproment && X > activeX + activeW - leeway)
@@ -204,6 +208,8 @@ return
 
     if (targetId != activeID) 
     {
+        wingetpos, X, Y, W, H, ahk_id %targetId%
+        Box("FF9E3B", 2, X+(W/2)-10, Y+(2*H/3)-10, X+(W/2)+10, Y+(2*H/3)+10)
         WinActivate, ahk_id %targetId%
     }
 return
@@ -214,6 +220,26 @@ return
     ;this can be better than wingetpos according to the documentation???
     DllCall("SetCursorPos", "int", activeX + activeW / 2, "int", activeY + activeH / 2)
     ;MouseMove, activeX , activeY , 0
+return
+
+;q::Box("FF60FF")
+ 
+Box(Color, F, X1, Y1, X2, Y2) { ; F: Frame thickness
+;	CoordMode, Mouse, Screen
+;	KeyWait, LButton, D
+;	MouseGetPos, X1, Y1
+;	KeyWait, LButton
+;	MouseGetPos, X2, Y2
+	Gui, Box:New, -DPIScale -Caption +LastFound -SysMenu +ToolWindow +AlwaysOnTop +E0x20
+	Gui, Box:Color,% Color
+	Gui, Box:Show,% "w" (W:=X2-X1) " h" (H:=Y2-Y1) " x"X1 " y"Y1
+	;WinSet, Region,% "0-0 "W "-0 "W "-"H " 0-"H " 0-0 "F "
+	;-"F " "W-F "-"F " "W-F "-"H-F " "F "-"H-F " "F "-"F
+	SetTimer, CloseBox, 700
+}
+
+CloseBox:
+	Gui, Box:Destroy
 return
 
 #+H::
