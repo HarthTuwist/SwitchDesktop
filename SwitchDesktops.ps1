@@ -246,7 +246,7 @@ $RefreshSpotifyTokenScriptBlock =
             grant_type="refresh_token"
             refresh_token=$refreshtoken}
 		$refreshHeader = @{'Authorization' = $idsecretb64}
-		$refreshobj = Invoke-WebRequest -Method "POST" -Headers $refreshHeader -Body $refreshBody -Uri 'https://accounts.spotify.com/api/token' ; $refreshobj.Content | Out-File -FilePath C:\SwitchDesktopScripts\Secrets\AccessToken.json
+		$refreshobj = Invoke-WebRequest -UseBasicParsing -Method "POST" -Headers $refreshHeader -Body $refreshBody -Uri 'https://accounts.spotify.com/api/token' ; $refreshobj.Content | Out-File -FilePath C:\SwitchDesktopScripts\Secrets\AccessToken.json
 		
 
 }
@@ -260,7 +260,7 @@ $script:SpotifyIDOfDevice = 0
 function SetSpotifyIDOfDevice{
     $GetIDAaccesstoken = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\AccessToken.json | ConvertFrom-Json).access_token
     $GetIDHeader = @{'Authorization' = (-join("Bearer ", $GetIDAaccesstoken))}
-    $GetIDResult = Invoke-WebRequest -Method "GET" -Headers $GetIDHeader -Uri 'https://api.spotify.com/v1/me/player/devices'
+    $GetIDResult = Invoke-WebRequest -UseBasicParsing -Method "GET" -Headers $GetIDHeader -Uri 'https://api.spotify.com/v1/me/player/devices'
 
     $script:SpotifyIDOfDevice=(($GetIDResult.Content | ConvertFrom-Json).devices | Where {$_.name -eq (Hostname)}).id
 }
@@ -428,7 +428,7 @@ do
             $accesstoken = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\AccessToken.json | ConvertFrom-Json).access_token
 
             $SongIdHeader = @{'Authorization' = (-join("Bearer ", $accesstoken))}
-            $SongIdResult = Invoke-WebRequest -Method "GET" -Headers $SongIdHeader -Uri 'https://api.spotify.com/v1/me/player/currently-playing'
+            $SongIdResult = Invoke-WebRequest -UseBasicParsing -Method "GET" -Headers $SongIdHeader -Uri 'https://api.spotify.com/v1/me/player/currently-playing'
 
 
             if($SongIdResult.StatusCode -eq 200)
@@ -438,7 +438,7 @@ do
                 $LikeSongHeader = @{'Authorization' = (-join("Bearer ", $accesstoken))
                     'Accept' = 'application/json'
                     'Content-Type' = 'application/json'}
-                $LikeSongResult = Invoke-WebRequest -Method "PUT" -Headers $LikeSongHeader -Uri (-join('https://api.spotify.com/v1/me/tracks?ids=', $CurrentSongId))
+                $LikeSongResult = Invoke-WebRequest -UseBasicParsing -Method "PUT" -Headers $LikeSongHeader -Uri (-join('https://api.spotify.com/v1/me/tracks?ids=', $CurrentSongId))
             }
         }
     }
@@ -467,7 +467,7 @@ do
             $accesstoken = (Get-Content -Path C:\SwitchDesktopScripts\Secrets\AccessToken.json | ConvertFrom-Json).access_token
 
             $ButtonPressHeader = @{'Authorization' = (-join("Bearer ", $accesstoken))}
-            $ButtonPressResult = Invoke-WebRequest -Method "POST" -Headers $ButtonPressHeader -Uri (-join('https://api.spotify.com/v1/me/player/next?device_id=', $SpotifyIDOfDevice))
+            $ButtonPressResult = Invoke-WebRequest -UseBasicParsing -Method "POST" -Headers $ButtonPressHeader -Uri (-join('https://api.spotify.com/v1/me/player/next?device_id=', $SpotifyIDOfDevice))
             #$ButtonPressResult  | Out-File -FilePath C:\Users\offen\output.txt  -append
        }
 	}

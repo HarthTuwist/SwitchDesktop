@@ -254,7 +254,9 @@ return
 ;    Send {RButton down}
 ;return
 
-AppsKey::RButton
+AppsKey::RAlt
+RAlt::RButton
+
 
 ;*AppsKey Up::
 ;    Send {RButton up}
