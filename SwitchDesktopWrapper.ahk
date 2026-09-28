@@ -13,7 +13,9 @@ Send {F22 up}
 
 ;"(get-process | ? { $_.processname -eq "powershell" } )| stop-process"  
 ;Process, Close, powershell.exe
-Run, powershell -Command "powershell -WindowStyle hidden -file  C:\SwitchDesktopScripts\SwitchDesktops.ps1"
+
+;Codex suggested this. To start the window with "," seems to prevent the brief flashup (even when Terminal is default powershell terminal)
+Run, powershell.exe -NoProfile -WindowStyle Hidden -File "C:\SwitchDesktopScripts\SwitchDesktops.ps1", C:\SwitchDesktopScripts, Hide
 
 
 ;TODO: Can we replace this Hack with the SendMessage Function?
