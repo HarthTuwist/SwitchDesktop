@@ -257,7 +257,12 @@ return
 ;return
 
 AppsKey::RAlt
+
+;In Autohotkey this magically works as a conditional if, so the check will not just happen
+;at script start but all the time be updated
+#If !GetKeyState("NumLock", "T")
 RAlt::RButton
+#If ;Autohotkey way of endif
 
 
 ;*AppsKey Up::
