@@ -1,3 +1,5 @@
+param([long]$WrapperWindow = 0)
+
 $host.ui.RawUI.WindowTitle = "SwitchDesktopsPowershell"
 Import-Module VirtualDesktop
 $LionSpecial = $false
@@ -18,7 +20,7 @@ $FirefoxTarget = [PSCustomObject]@{
 }
 
 #comment this in to use the Laptop window target for creating new browser windows instead of the desktop one
-#$FirefoxTarget = $LaptopFirefoxTarget
+$FirefoxTarget = $LaptopFirefoxTarget
 
 #from https://superuser.com/questions/1328345/find-all-window-titles-of-application-through-command-line
 Add-Type  @"
@@ -161,34 +163,6 @@ function WaitFirefoxOpen()
 "@
     }
 
-#TODO: Can we replace this jank with Messages, e.g. https://www.autohotkey.com/docs/misc/SendMessage.htm and
-#https://docs.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc 
-
-#skip F13, as we are sending it ourselves to communicate with autohotkey (the other way around than the other keys)
-#cannot use F23, as vbscript, which we seem to be using to send keys, can only send up to f16
-#$keyD1  = '0x7C' ## F13
-$keyD2  = '0x7D' ## F14
-$keyD3  = '0x7E' ## F15
-$keyD4  = '0x7F' ## F16
-$keyD5  = '0x80' ## F17
-$keyD6  = '0x81' ## F18
-$keyD7  = '0x82' ## F19
-$keyD8  = '0x83' ## F20
-$keyD9  = '0x84' ## F21
-$keyD10  = '0x85' ## F22
-$keyD1  = '0x86' ## F23
-$keyD11  = '0x87' ## F23
-
-$keyWin = '0x5B' ## Win Key
-
-#All these imports are copied from the internet, and I am not exactly sure what the syntax is, so I leave it as it is now
-$SigAsyncKeyState= @'
-    [DllImport("user32.dll", CharSet=CharSet.Auto, ExactSpelling=true)] 
-    public static extern short GetAsyncKeyState(int virtualKeyCode); 
-'@
-
-Add-Type -MemberDefinition $SigAsyncKeyState -Name Keyboard -Namespace PsOneApi -PassThru
-
 $SigGetForegroundWindow= @'
     [DllImport("user32.dll")]
      public static extern IntPtr GetForegroundWindow();
@@ -299,27 +273,16 @@ function StoreDesktopLastWindow
 
 
 
+. "$PSScriptRoot\DesktopCommandBridge.ps1"
+$commandBridge = New-Object DesktopCommandBridge
+try {
 do
-{  
+{
+#####################################Receive the next command
 
-#####################################Check for all the key presses and such
+	$command = $commandBridge.NextCommand()
 
-	$result = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD1)
-	$result2 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD2)
-	$result3 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD3)
-	$result4 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD4)
-	$result5 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD5)
-	$result6 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD6)
-	$result7 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD7)
-	$result8 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD8)
-	$result9 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD9)
-	$result10 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD10)
-	$result11 = [PsOneApi.Keyboard]::GetAsyncKeyState($keyD11)
-	$resultWin = [PsOneApi.Keyboard]::GetAsyncKeyState($keyWin)
-
-	$bWinPressed = [bool] (( $resultWin -eq -32767 ) -or ( $resultWin -eq -32768 ))
-
-	If  (([bool] (( $result -eq -32767 ) -or ( $result -eq -32768 ))) -and $bWinPressed)
+	If ($command -eq 1)
 	{ 
 		If($LastKey7 + $LastKey7AllowedTime -ge [Math]::Round((Get-Date).ToFileTimeUTC()/10000))
 		{
@@ -349,13 +312,12 @@ do
              #Get-Process | Where-Object { $_.mainWindowHandle -eq $script:LastHwndDesk0 } | Select-Object processName, MainWindowTItle, MainWindowHandle, Id |  Out-File -FilePath C:\Users\offen\output.txt -append
 
             Start-Sleep -Milliseconds 100
-             $wshell = New-Object -ComObject wscript.shell;
-             $wshell.SendKeys('{F13}')
+             [void][DesktopCommandBridge]::PostMessage([IntPtr]$WrapperWindow, [DesktopCommandBridge]::FocusMessage, [IntPtr]$PID, [IntPtr]::Zero)
             #[Win32Functions.EnumWindowsUtil]::SetForegroundWindow($script:LastHwndDesk0)
     #        [Win32.NativeMethods]::ShowWindowAsync($script:LastHwndDesk0, 1) #1 = do not change whether minimized or maximized
 		}
 	}
-	Elseif (([bool] (( $result2 -eq -32767 ) -or ( $result2 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 2)
 	{
 		If($LastKey7 + $LastKey7AllowedTime -ge [Math]::Round((Get-Date).ToFileTimeUTC()/10000))
 		{
@@ -366,13 +328,12 @@ do
             #StoreDesktopLastWindow
 			Get-Desktop  1 | Switch-Desktop
             Start-Sleep -Milliseconds 100
-             $wshell = New-Object -ComObject wscript.shell;
-             $wshell.SendKeys('{F13}')
+             [void][DesktopCommandBridge]::PostMessage([IntPtr]$WrapperWindow, [DesktopCommandBridge]::FocusMessage, [IntPtr]$PID, [IntPtr]::Zero)
          #   Start-Sleep -Milliseconds 200
          #   SetFocusToTopmostWindow
 		}
 	}
-	Elseif (([bool] (( $result3 -eq -32767 ) -or ( $result3 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 3)
 	{
 		If($LastKey7 + $LastKey7AllowedTime -ge [Math]::Round((Get-Date).ToFileTimeUTC()/10000))
 		{
@@ -382,12 +343,11 @@ do
 		Else {
 			Get-Desktop  2 | Switch-Desktop
             Start-Sleep -Milliseconds 100
-             $wshell = New-Object -ComObject wscript.shell;
-             $wshell.SendKeys('{F13}')
+             [void][DesktopCommandBridge]::PostMessage([IntPtr]$WrapperWindow, [DesktopCommandBridge]::FocusMessage, [IntPtr]$PID, [IntPtr]::Zero)
             #SetFocusToTopmostWindow
 		}
 	}
-	Elseif (([bool] (( $result4 -eq -32767 ) -or ( $result4 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 4)
 	{
 		If($LastKey7 + $LastKey7AllowedTime -ge [Math]::Round((Get-Date).ToFileTimeUTC()/10000))
 		{
@@ -397,26 +357,25 @@ do
 		Else {
 			Get-Desktop  3 | Switch-Desktop
             Start-Sleep -Milliseconds 100
-             $wshell = New-Object -ComObject wscript.shell;
-             $wshell.SendKeys('{F13}')
+             [void][DesktopCommandBridge]::PostMessage([IntPtr]$WrapperWindow, [DesktopCommandBridge]::FocusMessage, [IntPtr]$PID, [IntPtr]::Zero)
             #SetFocusToTopmostWindow
 		}
 	}
-	Elseif (([bool] (( $result5 -eq -32767 ) -or ( $result5 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 5)
 	{
 		$hwnd = [Win32.Utils]::GetForegroundWindow()
 		Pin-Window $hwnd
 	}
-	Elseif (([bool] (( $result6 -eq -32767 ) -or ( $result6 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 6)
 	{
 		$hwnd = [Win32.Utils]::GetForegroundWindow()
 		Unpin-Window $hwnd
 	}
-	Elseif (([bool] (( $result7 -eq -32767 ) -or ( $result7 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 7)
 	{
 		$LastKey7 = [Math]::Round((Get-Date).ToFileTimeUTC()/10000)
 	}
-	Elseif (([bool] (( $result8 -eq -32767 ) -or ( $result8 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 8)
 	{
         if (-Not $LionSpecial) 
         {
@@ -442,18 +401,18 @@ do
             }
         }
     }
-	Elseif (([bool] (( $result9 -eq -32767 ) -or ( $result9 -eq -32768 ))) -and $bWinPressed)
+	Elseif ($command -eq 9)
 	{
 		$Firefox= WaitFirefoxOpen -Arguments "-private-window" 
 		[Window]::MoveWindow($Firefox, $FirefoxTarget.XPos, $FirefoxTarget.YPos, $FirefoxTarget.Width, $FirefoxTarget.Height, $True)
         [Win32.NativeMethods]::ShowWindowAsync($Firefox, 3)
 	}
-	Elseif (([bool] (( $result10 -eq -32767 ) -or ( $result10 -eq -32768 ))) )
+	Elseif ($command -eq 10)
 	{
         exit
 	}
     
-	Elseif (([bool] (( $result11 -eq -32767 ) -or ( $result11 -eq -32768 ))) )
+	Elseif ($command -eq 11)
 	{
         #if we do not have a device ID, mainly because spotify started after the script, set the device id here
         #TODO: Can the device ID change while running, or with restarting spotify? I do not think it does
@@ -490,4 +449,8 @@ do
     Start-Sleep -Milliseconds 15
 
 } while($true)
+} finally {
+    # Clean up the hidden message window on normal exit or error.
+    $commandBridge.Dispose()
+}
 

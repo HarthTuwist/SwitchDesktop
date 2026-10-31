@@ -3,11 +3,12 @@
 ;I am not sure why I am doing this anymore and whether this is necessary
 #InstallKeybdHook
 
-;Send F22 to tell process that are still running that they should cancel
-;this doesn't seem to work, but the hotkey does, strange
-Send {F22 down}
-Sleep 200
-Send {F22 up} 
+;Receive focus requests from our PowerShell child, including with UI Access.
+OnMessage(0x802A, "FocusDesktopWindow")
+DllCall("ChangeWindowMessageFilterEx", "Ptr", A_ScriptHwnd, "UInt", 0x802A, "UInt", 1, "Ptr", 0)
+
+;Try to stop previous backends, but launch the replacement even if shutdown fails.
+StopDesktopBackend()
 
 ;Setup powershell heavy lifter:
 
@@ -15,23 +16,33 @@ Send {F22 up}
 ;Process, Close, powershell.exe
 
 ;Codex suggested this. To start the window with "," seems to prevent the brief flashup (even when Terminal is default powershell terminal)
-Run, powershell.exe -NoProfile -WindowStyle Hidden -File "C:\SwitchDesktopScripts\SwitchDesktops.ps1", C:\SwitchDesktopScripts, Hide
+Run, powershell.exe -NoProfile -WindowStyle Hidden -File "C:\SwitchDesktopScripts\SwitchDesktops.ps1" -WrapperWindow %A_ScriptHwnd%, C:\SwitchDesktopScripts, Hide, DesktopBackendPID
 
 
-;TODO: Can we replace this Hack with the SendMessage Function?
-;LWin & f::switchDesktopByNumber(1)
-<#f::
-	;Send {F13 down} 
-	;Sleep 30 
-	;Send {F13 up}  
-    ;Do not use F13m use F23 instead
-	Send {F23 down} 
-	Sleep 30 
-	Send {F23 up}  
-return
+SendDesktopCommand(command, notify := true)
+{
+    global DesktopBackendPID
+    previousSetting := A_DetectHiddenWindows
+    DetectHiddenWindows, On ;temporarily disable the DetectHiddenWindows policy
+    target := WinExist("SwitchDesktopCommandWindow ahk_pid " DesktopBackendPID)
+    sent := false
+    if (target)
+    {
+        PostMessage, 0x8029, %command%, 0,, ahk_id %target%
+        sent := !ErrorLevel
+    }
+    DetectHiddenWindows, %previousSetting%
+    if (sent)
+        return true
+    return false
+}
 
-;this is called by a hook via visual basic from SwitchDesktop.ps1
-F13::
+FocusDesktopWindow(senderPID, lParam, msg, hwnd)
+{
+    global DesktopBackendPID
+    if (senderPID != DesktopBackendPID)
+        return
+
     winget, id, list,
     loop, %id%
     {
@@ -46,71 +57,86 @@ F13::
             return
         }
     }
+}
+
+StopDesktopBackend(windowSelector := "SwitchDesktopCommandWindow ahk_exe powershell.exe")
+{
+    previousSetting := A_DetectHiddenWindows
+    DetectHiddenWindows, On
+    WinGet, backends, List, %windowSelector%
+    stopped := true
+    Loop, %backends%
+    {
+        target := backends%A_Index%
+        PostMessage, 0x8029, 10, 0,, ahk_id %target%
+        if (ErrorLevel)
+        {
+            stopped := false
+            break
+        }
+        ;Wait for the old receiver to close before starting another backend.
+        WinWaitClose, ahk_id %target%,, 5
+        if (ErrorLevel)
+        {
+            stopped := false
+            break
+        }
+    }
+    DetectHiddenWindows, %previousSetting%
+    return stopped
+}
+
+
+
+
+
+;Keys to switch desktops
+<#f::
+    SendDesktopCommand(1)
 return
 
 <#c::
-	Send {F14 down}
-	Sleep 30
-	Send {F14 up}  
+    SendDesktopCommand(2)
 return
 
 <#s::
-	Send {F15 down}
-	Sleep 30
-	Send {F15 up} 
+    SendDesktopCommand(3)
 return
 
 <#y::
-	Send {F16 down}
-	Sleep 30
-	Send {F16 up}  
+    SendDesktopCommand(4)
 return
 
+
+
+
 #k::
-	Send {F17 down}
-	Sleep 30
-	Send {F17 up} 
+    SendDesktopCommand(5)
 return
 
 #!k::
-	Send {F18 down}
-	Sleep 30
-	Send {F18 up} 
+    SendDesktopCommand(6)
 return
 
 #b::
-	Send {F19 down}
-	Sleep 30
-	Send {F19 up} 
+    SendDesktopCommand(7)
 return
 
 ;Lion special key
 #!c:: 
-	Send {F20 down}
-	Sleep 30
-	Send {F20 up} 
+    SendDesktopCommand(8)
 return
 
 #!f::
-	Send {F21 down}
-	Sleep 30
-	Send {F21 up} 
+    SendDesktopCommand(9)
 return
 
 #^!l::
-	Send {F22 down}
-	Sleep 30
-	Send {F22 up} 
+    SendDesktopCommand(10)
 return
 
-;F23::
-;Used above
-;Do not use here
-
 #u::
-	Send {F24 down}
-	Sleep 30
-	Send {F24 up} 
+    SendDesktopCommand(11)
 return
     
 ;<#h::
