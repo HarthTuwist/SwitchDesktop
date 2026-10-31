@@ -11,6 +11,8 @@ The Powershell Modules PSVirtualDesktop ~~and WASP~~(WASP is not needed) need to
 
 The git repository has to be located in C:/SwitchDesktopScripts
 
+You might have the problem that keys dont work in administrator approved (with UAC) such as the Task Manager. To let AutoHotkey interact with elevated windows, enable "Run with UI Access" in AutoHotkey Setup and launch the wrapper with `"C:\Program Files\AutoHotkey\AutoHotkeyU64_UIA.exe" "C:\SwitchDesktopScripts\SwitchDesktopWrapper.ahk"` (or equivalent). UI Access applies to AutoHotkey; it does not make its PowerShell child an administrator. See the [AutoHotkey UAC FAQ](https://www.autohotkey.com/docs/v1/FAQ.htm#uac).
+
 #Hotkeys
 
 ## Win F
