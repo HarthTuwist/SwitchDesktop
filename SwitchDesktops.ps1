@@ -2,6 +2,26 @@ param([long]$WrapperWindow = 0)
 
 $host.ui.RawUI.WindowTitle = "SwitchDesktopsPowershell"
 Import-Module VirtualDesktop
+# Reuse VirtualDesktop's COM definitions, bypassing MakeVisible's taskbar handling.
+function Switch-DesktopDirect {
+    param([Parameter(Mandatory)][int]$Index)
+
+    $desktop = [VirtualDesktop.Desktop]::FromIndex($Index)
+    $flags = [Reflection.BindingFlags]'Instance,NonPublic'
+    $nativeDesktop = [VirtualDesktop.Desktop].GetField('ivd', $flags).GetValue($desktop)
+    $assembly = [VirtualDesktop.Desktop].Assembly
+    $managerType = $assembly.GetType('VirtualDesktop.DesktopManager', $true)
+    $manager = $managerType.GetField('VirtualDesktopManagerInternal',
+        [Reflection.BindingFlags]'Static,NonPublic').GetValue($null)
+    $method = $assembly.GetType('VirtualDesktop.IVirtualDesktopManagerInternal', $true).GetMethod('SwitchDesktop')
+    $arguments = if ($method.GetParameters().Count -eq 2) {
+        [object[]]@([IntPtr]::Zero, $nativeDesktop)
+    } else {
+        [object[]]@($nativeDesktop)
+    }
+    [void]$method.Invoke($manager, $arguments)
+}
+
 $LionSpecial = $false
 #$LionSpecial = $true
 
@@ -275,7 +295,6 @@ function StoreDesktopLastWindow
 
 . "$PSScriptRoot\DesktopCommandBridge.ps1"
 $commandBridge = New-Object DesktopCommandBridge
-try {
 do
 {
 #####################################Receive the next command
@@ -290,7 +309,7 @@ do
 			$LastKey7 = 0	
 		}
 		Else {
-			Get-Desktop  0 | Switch-Desktop
+			Switch-DesktopDirect 0
         #    Start-Sleep -Milliseconds 100
             #SetFocusToTopmostWindow
              #-join ("switching to", $script:LastHwndDesk0) | Out-File -FilePath C:\Users\offen\output.txt -append
@@ -326,7 +345,7 @@ do
 		}
 		Else {
             #StoreDesktopLastWindow
-			Get-Desktop  1 | Switch-Desktop
+			Switch-DesktopDirect 1
             Start-Sleep -Milliseconds 100
              [void][DesktopCommandBridge]::PostMessage([IntPtr]$WrapperWindow, [DesktopCommandBridge]::FocusMessage, [IntPtr]$PID, [IntPtr]::Zero)
          #   Start-Sleep -Milliseconds 200
@@ -341,7 +360,7 @@ do
 			$LastKey7 = 0	
 		}
 		Else {
-			Get-Desktop  2 | Switch-Desktop
+			Switch-DesktopDirect 2
             Start-Sleep -Milliseconds 100
              [void][DesktopCommandBridge]::PostMessage([IntPtr]$WrapperWindow, [DesktopCommandBridge]::FocusMessage, [IntPtr]$PID, [IntPtr]::Zero)
             #SetFocusToTopmostWindow
@@ -355,7 +374,7 @@ do
 			$LastKey7 = 0	
 		}
 		Else {
-			Get-Desktop  3 | Switch-Desktop
+			Switch-DesktopDirect 3
             Start-Sleep -Milliseconds 100
              [void][DesktopCommandBridge]::PostMessage([IntPtr]$WrapperWindow, [DesktopCommandBridge]::FocusMessage, [IntPtr]$PID, [IntPtr]::Zero)
             #SetFocusToTopmostWindow
@@ -449,8 +468,4 @@ do
     Start-Sleep -Milliseconds 15
 
 } while($true)
-} finally {
-    # Clean up the hidden message window on normal exit or error.
-    $commandBridge.Dispose()
-}
 

@@ -34,8 +34,9 @@ OnMessage(0x802A, "RecordFocusMessage")
 DllCall("ChangeWindowMessageFilterEx", "Ptr", A_ScriptHwnd, "UInt", 0x802A, "UInt", 1, "Ptr", 0)
 StopDesktopBackend("ahk_id PREVIOUS_HANDLE")
 FileAppend, %A_ScriptHwnd%, READY_PATH
-Loop, 11
+    Loop, 9
     SendDesktopCommand(A_Index, false)
+SendDesktopCommand(11, false)
 FileAppend, sent, SENT_PATH
 SetTimer, Timeout, -10000
 return
@@ -77,7 +78,7 @@ try {
     $previousBridge.Dispose()
     $previousBridge = $null
     # Simulate a busy action: let AutoHotkey finish sending before reading any
-    # commands, then verify Windows retained every command in order.
+    # commands, then verify only the latest command is returned.
     $deadline = (Get-Date).AddSeconds(5)
     while (-not (Test-Path $sent) -and (Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 10
@@ -85,20 +86,10 @@ try {
     if (-not (Test-Path $sent)) { throw 'AutoHotkey did not finish sending commands.' }
     Write-Output 'PASS: startup sends shutdown and waits for the previous receiver to close.'
     Start-Sleep -Milliseconds 100
-    $received = @()
-    $deadline = (Get-Date).AddSeconds(8)
-    while ($received.Count -lt 11 -and (Get-Date) -lt $deadline) {
-        $next = $bridge.NextCommand()
-        if ($next -ne 0) { $received += $next } else { Start-Sleep -Milliseconds 10 }
-    }
-    if (($received -join ',') -ne ((1..11) -join ',')) {
-        $readyValue = if (Test-Path $ready) { Get-Content $ready -Raw } else { 'not ready' }
-        $process.Refresh()
-        $exitValue = if ($process.HasExited) { $process.ExitCode } else { 'still running' }
-        throw ("Unexpected command queue: $($received -join ','); AutoHotkey: $readyValue; exit: $exitValue; bridge: $($bridge.Handle)")
-    }
+    $received = $bridge.NextCommand()
+    if ($received -ne 11) { throw "Expected latest command 11, got $received." }
     if ($bridge.NextCommand() -ne 0) { throw 'Invalid command accepted.' }
-    Write-Output 'PASS: all 11 commands survive a busy main thread in order; invalid commands rejected.'
+    Write-Output 'PASS: only the latest pending command is returned; invalid commands rejected.'
 
     $wrapperHandle = [IntPtr][long](Get-Content $ready -Raw)
     if (-not [DesktopCommandBridge]::PostMessage($wrapperHandle,

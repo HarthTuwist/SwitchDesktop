@@ -1,5 +1,5 @@
 # The main PowerShell thread reads commands from its window's Windows message
-# queue. Commands wait there while PowerShell is busy with an action.
+# queue. Only the latest pending command is executed after a busy action.
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -ReferencedAssemblies System.dll, System.Core.dll, System.Windows.Forms.dll -TypeDefinition @'
 using System;
@@ -42,16 +42,20 @@ public sealed class DesktopCommandBridge : NativeWindow, IDisposable
     public int NextCommand()
     {
         NativeMessage message;
-        // PM_REMOVE (1) takes one command out of Windows' queue. No message
-        // dispatch or separate application queue is needed for these numbers.
+        // Drain pending messages and keep the latest valid command. Shutdown
+        // takes precedence so startup cleanup cannot accidentally be cancelled.
+        int latest = 0;
         while (PeekMessage(out message, Handle, CommandMessage, CommandMessage, 1))
         {
             ulong command = message.WParam.ToUInt64();
-            if (command >= 1 && command <= 11) return (int)command;
+            if (command == 10) return 10;
+            if (command >= 1 && command <= 11) latest = (int)command;
         }
-        return 0;
+        return latest;
     }
 
+    // Only needed when the PowerShell session outlives the bridge, e.g. in tests.
+    // The backend never calls it: Windows destroys the window when the process exits.
     public void Dispose()
     {
         DestroyHandle();
